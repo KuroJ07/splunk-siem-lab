@@ -27,3 +27,30 @@ NAT Network vs NAT in VirtualBox and how virtual machines communicate with each 
 
 ### Result
 Windows Security, System, and Application logs are now flowing into Splunk in real time and searchable with index=main.
+
+## Failed Login Detection
+Status: Complete
+
+### What was built
+A scheduled Splunk alert called Multiple Failed Logins Detected. It searches for Event ID 4625 (failed logon) grouped by host, and triggers when 3 or more occur within a 15 minute window.
+
+### Search query
+index=main EventCode=4625
+| stats count by host, ComputerName
+| where count >= 3
+
+### Schedule
+Runs every 5 minutes using cron schedule */5 * * * *
+
+### Severity reasoning
+Set to Medium. A few failed logins are normal user error. Three or more in a short window could indicate a brute force attempt or a user locked out, both worth investigating but not an automatic critical incident.
+
+### Network+ and security concepts this covers
+Windows Event ID 4625 is the standard failed logon event.
+
+Cron syntax for scheduling recurring tasks, a concept used across Linux and many monitoring tools.
+
+Detection thresholds and severity tiers, a core SOC analyst concept. Not every event needs the same level of urgency.
+
+### Real test
+Generated failed logins manually by entering the wrong password 3 times at the Windows lock screen. The alert correctly grouped and counted these events.
