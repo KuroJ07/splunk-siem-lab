@@ -81,3 +81,29 @@ Event ID 4624 is the standard successful logon event, complementing 4625 for fai
 Correlating two different event types over time using stats and eval is a core technique for building behavioral detections, not just single event alerts.
 
 The transaction command was tested first but did not produce results, so a stats based approach with earliest and latest was used instead. This is also a more performant pattern in real world Splunk environments.
+
+## New User Account Creation Detection
+Status: Complete
+
+### What was built
+A scheduled Splunk alert called New User Account Created. It watches for Event ID 4720, which fires whenever a new local user account is created on Windows.
+
+### Search query
+index=main EventCode=4720
+| table _time, host, ComputerName, Account_Name, Caller_User_Name
+
+### Schedule
+Runs every 5 minutes, looking back over the last 15 minutes.
+
+### Severity reasoning
+Set to Medium-Low. New account creation is not always malicious, IT does this routinely. But it is a well known persistence technique for attackers, who create a new account after compromising a system so they have a backup way back in. The point of this alert is visibility and review, not an automatic red flag.
+
+### Real test
+Created a local account called testuser123 using net user testuser123 Password123! /add from an administrator command prompt. The event correctly logged Caller_User_Name as vboxuser (the account that created it) and Account_Name as testuser123 (the account that was created).
+
+### Network+ and security concepts this covers
+Event ID 4720 is the standard Windows event for local user account creation.
+
+Persistence is a stage of the attack lifecycle where an attacker ensures continued access after initial compromise, often by creating new accounts or scheduled tasks.
+
+Not every security relevant event needs to be inherently suspicious to be worth alerting on. Some alerts exist purely for visibility and audit trail purposes.
