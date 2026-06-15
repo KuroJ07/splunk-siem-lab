@@ -54,3 +54,30 @@ Detection thresholds and severity tiers, a core SOC analyst concept. Not every e
 
 ### Real test
 Generated failed logins manually by entering the wrong password 3 times at the Windows lock screen. The alert correctly grouped and counted these events.
+
+## Successful Login After Failed Attempts Detection
+Status: Complete
+
+### What was built
+A scheduled Splunk alert called Successful Login After Failed Attempts. It checks for a successful login (Event ID 4624) occurring within 15 minutes of a failed login (Event ID 4625) on the same host.
+
+### Search query
+index=main (EventCode=4625 OR EventCode=4624) host=windows-endpoin
+| stats earliest(eval(if(EventCode=4625, _time, null()))) as first_fail, latest(eval(if(EventCode=4624, _time, null()))) as success_time by host
+| where isnotnull(first_fail) AND isnotnull(success_time) AND success_time > first_fail AND (success_time - first_fail) <= 900
+
+### Schedule
+Runs every 5 minutes using cron schedule */5 * * * *, looking back over the last 30 minutes.
+
+### Severity reasoning
+Set to High. A failed login followed by a successful one on the same host is a stronger signal than failed logins alone. It could mean a user fumbled their password and recovered, or it could mean someone guessed or cracked credentials and got in. Either way it warrants a closer look.
+
+### Real test
+Locked the Windows endpoint, failed the password 3 times, then logged in successfully. The detection correctly identified the failed attempts at 8:20:53 PM through 8:20:58 PM and the successful login 6 seconds later at 8:21:04 PM, well within the 15 minute threshold.
+
+### Network+ and security concepts this covers
+Event ID 4624 is the standard successful logon event, complementing 4625 for failed logons.
+
+Correlating two different event types over time using stats and eval is a core technique for building behavioral detections, not just single event alerts.
+
+The transaction command was tested first but did not produce results, so a stats based approach with earliest and latest was used instead. This is also a more performant pattern in real world Splunk environments.
